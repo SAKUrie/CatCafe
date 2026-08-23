@@ -1,0 +1,108 @@
+name: Deploy WebGL to itch.io
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      itch_channel:
+        description: 'itch.io channel (must already be marked HTML5 / playable in browser)'
+        required: true
+        default: 'html'
+      user_version:
+        description: 'Optional itch.io user version; defaults to the Git tag or Player Settings version'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: itch-webgl-production
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    name: Build WebGL and upload to itch.io
+    runs-on: ubuntu-latest
+    env:
+      BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+      ITCH_TARGET: toffeerie/catcafe
+      ITCH_CHANNEL: ${{ inputs.itch_channel || vars.ITCH_CHANNEL || 'html' }}
+      REQUESTED_VERSION: ${{ inputs.user_version }}
+
+    steps:
+      - name: Check deployment configuration
+        shell: bash
+        run: |
+          test -n "$BUTLER_API_KEY" || { echo 'Missing GitHub secret BUTLER_API_KEY.' >&2; exit 1; }
+
+      - name: Check out source and LFS assets
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Restore Unity Library cache
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-WebGL-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Library-WebGL-
+
+      - name: Build WebGL player
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          targetPlatform: WebGL
+          buildsPath: build
+
+      - name: Find WebGL output and resolve version
+        id: metadata
+        shell: bash
+        run: |
+          WEBGL_INDEX="$(find build -type f -name index.html -print -quit)"
+          test -n "$WEBGL_INDEX" || { echo 'Unity build did not produce an index.html file.' >&2; exit 1; }
+          echo "webgl_directory=$(dirname "$WEBGL_INDEX")" >> "$GITHUB_OUTPUT"
+
+          VERSION="$REQUESTED_VERSION"
+          if [ -z "$VERSION" ] && [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          fi
+          if [ -z "$VERSION" ]; then
+            VERSION="$(sed -n 's/^  bundleVersion: //p' ProjectSettings/ProjectSettings.asset | head -n 1)"
+          fi
+          test -n "$VERSION" || { echo 'Could not resolve a build version.' >&2; exit 1; }
+          echo "user_version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Install butler
+        shell: bash
+        run: |
+          BUTLER_VERSION="$(curl --fail --silent --show-error https://broth.itch.zone/butler/linux-amd64/LATEST)"
+          curl --fail --silent --show-error --location \
+            "https://broth.itch.zone/butler/linux-amd64/${BUTLER_VERSION}/archive/default" \
+            --output /tmp/butler.zip
+          unzip -q /tmp/butler.zip -d /tmp/butler
+          chmod +x /tmp/butler/butler
+          /tmp/butler/butler version
+
+      - name: Upload WebGL build to itch.io
+        shell: bash
+        run: |
+          /tmp/butler/butler push "${{ steps.metadata.outputs.webgl_directory }}" \
+            "${ITCH_TARGET}:${ITCH_CHANNEL}" \
+            --userversion "${{ steps.metadata.outputs.user_version }}"
+
+      - name: Upload build artifact on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: CatCafe-WebGL-failed-${{ github.run_number }}
+          path: build
+          if-no-files-found: ignore
+          retention-days: 3
