@@ -1,0 +1,7 @@
+interface:
+  display_name: "猫咖数值 Harness"
+  short_description: "分析猫咖4×4牌池稀释、邻接联动概率与数量流派收益"
+  default_prompt: "Use $cat-cafe-balance-harness to evaluate the current cat café pool-size and synergy probabilities."
+
+policy:
+  allow_implicit_invocation: true
