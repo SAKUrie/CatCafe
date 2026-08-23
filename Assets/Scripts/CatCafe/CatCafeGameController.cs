@@ -8267,9 +8267,8 @@ private Button CreateCard(Transform parent, string title, Rarity rarity, string 
                 submittedScore.HasValue ? 34f : 0f, 0f, PaperSurface.Transparent);
 
             GameObject viewportObject = NewUi("LeaderboardViewport", content);
-            // Mask 依赖同物体 Graphic 的 alpha；此前 Graphic 被设成透明，结果把所有
-            // 排行榜文本都裁掉了。RectMask2D 不渲染任何遮罩图，也正好适用于这个矩形列表。
-            viewportObject.AddComponent<RectMask2D>();
+            // 排行榜正文首先必须稳定可见。这里不挂 Mask：当前运行时面板的裁剪链会把
+            // 动态创建的 TMP 内容整块裁空；ScrollRect 仍负责内容的上下移动。
             LayoutElement viewportSize = viewportObject.AddComponent<LayoutElement>();
             viewportSize.minHeight = UiValue("ui_leaderboard_list_height");
             viewportSize.preferredHeight = UiValue("ui_leaderboard_list_height");
