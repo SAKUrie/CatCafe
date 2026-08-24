@@ -6,10 +6,12 @@ namespace ManyFace.CatCafe.EditorTools
     internal sealed class CatCafePaperSkinImporter : AssetPostprocessor
     {
         private const string PaperSkinPath = "Assets/Resources/CatCafe/PaperSkin/";
+        private const string SelectUiSkinPath = "Assets/Resources/CatCafe/selectUI/";
 
         private void OnPreprocessTexture()
         {
-            if (!assetPath.StartsWith(PaperSkinPath, System.StringComparison.Ordinal)) return;
+            if (!assetPath.StartsWith(PaperSkinPath, System.StringComparison.Ordinal) &&
+                !assetPath.StartsWith(SelectUiSkinPath, System.StringComparison.Ordinal)) return;
 
             TextureImporter importer = (TextureImporter)assetImporter;
             importer.textureType = TextureImporterType.Sprite;
@@ -19,11 +21,13 @@ namespace ManyFace.CatCafe.EditorTools
             importer.textureCompression = TextureImporterCompression.Uncompressed;
             importer.filterMode = UnityEngine.FilterMode.Bilinear;
             importer.wrapMode = UnityEngine.TextureWrapMode.Clamp;
-            importer.maxTextureSize = 2048;
+            // 标题皮条源图宽 2172px，必须保留原始尺寸，不能因导入上限被降采样。
+            importer.maxTextureSize = 4096;
             importer.spriteBorder = UnityEngine.Vector4.zero;
 
             string fileName = System.IO.Path.GetFileNameWithoutExtension(assetPath);
-            if (fileName.StartsWith("title-ribbon", System.StringComparison.Ordinal))
+            if (fileName.StartsWith("title-ribbon", System.StringComparison.Ordinal) ||
+                fileName.StartsWith("choice-title-", System.StringComparison.Ordinal))
             {
                 importer.spriteBorder = new UnityEngine.Vector4(170f, 32f, 170f, 32f);
             }
@@ -31,9 +35,14 @@ namespace ManyFace.CatCafe.EditorTools
             {
                 importer.spriteBorder = new UnityEngine.Vector4(64f, 34f, 64f, 34f);
             }
-            else if (fileName == "modal-panel" || fileName == "modal-main-v2")
+            else if (fileName == "modal-panel" || fileName == "modal-main-v2" ||
+                fileName.StartsWith("choice-ledger-panel", System.StringComparison.Ordinal))
             {
                 importer.spriteBorder = new UnityEngine.Vector4(72f, 64f, 72f, 64f);
+            }
+            else if (fileName.StartsWith("choice-card-", System.StringComparison.Ordinal))
+            {
+                importer.spriteBorder = new UnityEngine.Vector4(30f, 30f, 30f, 30f);
             }
             else if (fileName.StartsWith("badge-", System.StringComparison.Ordinal))
             {
@@ -45,7 +54,11 @@ namespace ManyFace.CatCafe.EditorTools
         [MenuItem("Tools/Cat Cafe/UI/重新导入纸艺菜单皮肤")]
         private static void ReimportPaperSkin()
         {
-            string[] guids = AssetDatabase.FindAssets("t:Texture2D", new[] { PaperSkinPath.TrimEnd('/') });
+            string[] guids = AssetDatabase.FindAssets("t:Texture2D", new[]
+            {
+                PaperSkinPath.TrimEnd('/'),
+                SelectUiSkinPath.TrimEnd('/')
+            });
             for (int index = 0; index < guids.Length; index++)
             {
                 string path = AssetDatabase.GUIDToAssetPath(guids[index]);

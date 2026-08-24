@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: d87df18632bb9814dab799982afe222f
+guid: 156c656fa51f73d4cb43021f411501df
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 8567595341982163662
-    second: start-backdrop_0
+      213: -3574720317822773440
+    second: start-button-play_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -48,7 +48,7 @@ TextureImporter:
   compressionQuality: 50
   spriteMode: 1
   spriteExtrude: 1
-  spriteMeshType: 1
+  spriteMeshType: 0
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
   spritePixelsToUnits: 100
@@ -96,11 +96,24 @@ TextureImporter:
     ignorePlatformSupport: 0
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 8192
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
   spriteSheet:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: start-backdrop_0
+      name: start-button-play_0
       rect:
         serializedVersion: 2
         x: 0
@@ -115,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: ec2632a029636e670800000000000000
-      internalID: 8567595341982163662
+      spriteID: 0475dc48fca046ec0800000000000000
+      internalID: -3574720317822773440
       vertices: []
       indices: 
       edges: []
@@ -135,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      start-backdrop_0: 8567595341982163662
+      start-button-play_0: -3574720317822773440
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

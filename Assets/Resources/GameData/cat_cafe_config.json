@@ -4503,7 +4503,7 @@
     },
     {
       "key": "ui_run_archetype_summary_row_format",
-      "value": "{0}：收集 {1}/{2} 枚 · 赚得 {3} 金币",
+      "value": "<mspace=17>{0,-5}  收集 {1,2}/{2,-2} 枚  赚得 {3,3} 金币</mspace>",
       "value_type": "string",
       "design_note": "局末流派统计；0=流派，1=拥有，2=总数，3=收入",
       "enabled": true
@@ -4800,6 +4800,27 @@
       "value": "提交营业额到排行",
       "value_type": "string",
       "design_note": "营业结束账本进入成绩登记页的按钮文案",
+      "enabled": true
+    },
+    {
+      "key": "ui_choice_panel_skin",
+      "value": "CatCafe/selectUI/choice-ledger-panel-v1",
+      "value_type": "string",
+      "design_note": "三选一纸艺皮肤（Resources/CatCafe/selectUI）",
+      "enabled": true
+    },
+    {
+      "key": "ui_choice_title_skin",
+      "value": "CatCafe/selectUI/choice-title-leather-v1",
+      "value_type": "string",
+      "design_note": "三选一纸艺皮肤（Resources/CatCafe/selectUI）",
+      "enabled": true
+    },
+    {
+      "key": "ui_choice_card_skin",
+      "value": "CatCafe/selectUI/choice-card-v1",
+      "value_type": "string",
+      "design_note": "三选一纸艺皮肤（Resources/CatCafe/selectUI）",
       "enabled": true
     }
   ],

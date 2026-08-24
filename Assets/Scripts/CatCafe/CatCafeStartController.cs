@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
@@ -37,8 +38,9 @@ namespace ManyFace.CatCafe
         private readonly List<Button> tutorialButtons = new List<Button>();
         private readonly List<Button> screenButtons = new List<Button>();
 
-        private void Start()
+        private IEnumerator Start()
         {
+            yield return CatCafeStartUiBundleCache.Initialize();
             EnsureEventSystem();
             BuildUi();
             RefreshCurrentShopLine();
@@ -127,7 +129,11 @@ private void BuildUi()
             Image image = layer.AddComponent<Image>();
             image.raycastTarget = false;
 
-            Sprite sprite = Resources.Load<Sprite>(StartUiResourceRoot + spriteName);
+            Sprite sprite = CatCafeStartUiBundleCache.LoadSprite(StartUiResourceRoot + spriteName);
+            if (sprite == null)
+            {
+                sprite = Resources.Load<Sprite>(StartUiResourceRoot + spriteName);
+            }
             if (sprite == null)
             {
                 image.color = new Color(1f, 0f, 1f, 0.35f);

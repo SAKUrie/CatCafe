@@ -4116,7 +4116,7 @@ namespace ManyFace.CatCafe
                 string key = options[i];
                 Definition def = defs[key];
                 Button card = CreateCard(
-                    choicesRoot, def.Name, EffectiveRarity(def), Join(def.Rules, " "), def.Asset, key);
+                    choicesRoot, def.Name, EffectiveRarity(def), Join(def.Rules, " "), def.Asset, key, true);
                 Button captured = card;
                 card.onClick.AddListener(delegate { BeginChoose(key, captured); });
                 activeChoiceCards.Add(card);
@@ -4146,7 +4146,7 @@ namespace ManyFace.CatCafe
             {
                 string key = options[i];
                 ItemDefinition def = itemDefs[key];
-                Button card = CreateCard(itemChoicesRoot, def.Name, def.Rarity, def.Rule, def.Asset, key);
+                Button card = CreateCard(itemChoicesRoot, def.Name, def.Rarity, def.Rule, def.Asset, key, false);
                 Button captured = card;
                 card.onClick.AddListener(delegate { BeginChooseItem(key, captured); });
                 activeChoiceCards.Add(card);
@@ -4569,7 +4569,7 @@ namespace ManyFace.CatCafe
                 Definition definition = defs[key];
                 Button card = CreateCard(
                     choicesRoot, definition.Name, EffectiveRarity(definition),
-                    Join(definition.Rules, " "), definition.Asset, key);
+                    Join(definition.Rules, " "), definition.Asset, key, true);
                 Button captured = card;
                 card.onClick.AddListener(delegate { BeginConfiguredChoose(key, captured); });
                 activeChoiceCards.Add(card);
@@ -6878,13 +6878,22 @@ private void BuildReelOverlay(Transform boardContainer)
             rect.offsetMax = Vector2.zero;
         }
 
-private Button CreateCard(Transform parent, string title, Rarity rarity, string rule, string asset, string key)
+private Button CreateCard(Transform parent, string title, Rarity rarity, string rule, string asset, string key,
+            bool useChoiceLedgerSkin)
         {
             GameObject cardObject = NewUi(title, parent);
             Color cardFill = UiColor("ui_choice_card_" + RarityKey(rarity) + "_fill");
             Color rarityColor = BuffRarityColor(rarity);
             Image background = cardObject.AddComponent<Image>();
-            ApplySurface(background, PaperSurface.RewardCard, cardFill);
+            if (useChoiceLedgerSkin)
+            {
+                presentation.ApplyNamedSkin(background,
+                    CatCafeConfigDatabase.GetRequiredString("ui_choice_card_skin"), Color.white);
+            }
+            else
+            {
+                ApplySurface(background, PaperSurface.RewardCard, cardFill);
+            }
             background.raycastTarget = true;
 
             // 稀有度用配置表 rarities.color 上到描边，卡片一眼能分级，不必去读那行小字。
@@ -7981,6 +7990,12 @@ private Button CreateCard(Transform parent, string title, Rarity rarity, string 
             // 这四个节点要按卡片张数一起伸缩，所以存成字段而不是局部变量——
             // 之前这里用同名局部变量把字段遮蔽了，字段一直是 null，伸缩也就无从谈起。
             choicePanelRect = choicesRoot.parent.GetComponent<RectTransform>();
+            Image choicePanelImage = choicePanelRect.GetComponent<Image>();
+            presentation.ApplyNamedSkin(choicePanelImage,
+                CatCafeConfigDatabase.GetRequiredString("ui_choice_panel_skin"), Color.white);
+            Image choiceTitleImage = choiceTitle.transform.parent.GetComponent<Image>();
+            presentation.ApplyNamedSkin(choiceTitleImage,
+                CatCafeConfigDatabase.GetRequiredString("ui_choice_title_skin"), Color.white);
             choicePanelRect.anchoredPosition += new Vector2(UiValue("ui_choice_piece_offset_x"), 0f);
             choicePanelRect.sizeDelta = new Vector2(ChoicePanelBaseWidth,
                 UiValue("ui_choice_panel_height"));
@@ -8267,12 +8282,20 @@ private Button CreateCard(Transform parent, string title, Rarity rarity, string 
                 submittedScore.HasValue ? 34f : 0f, 0f, PaperSurface.Transparent);
 
             GameObject viewportObject = NewUi("LeaderboardViewport", content);
-            // 排行榜正文首先必须稳定可见。这里不挂 Mask：当前运行时面板的裁剪链会把
-            // 动态创建的 TMP 内容整块裁空；ScrollRect 仍负责内容的上下移动。
+            // 正文只在列表窗口内显示，不能滚到下方的“加载更多”和“关闭”按钮区域。
+            viewportObject.AddComponent<RectMask2D>();
             LayoutElement viewportSize = viewportObject.AddComponent<LayoutElement>();
+            // VerticalLayoutGroup 在 childForceExpandWidth=false 时会按子项的首选宽度布局。
+            // ScrollRect 自身报告的首选宽度为 0，必须由这个布局项明确提供正文列宽。
+            float leaderboardListWidth = UiValue("ui_leaderboard_content_width") - layout.padding.horizontal;
+            viewportSize.minWidth = leaderboardListWidth;
+            viewportSize.preferredWidth = leaderboardListWidth;
             viewportSize.minHeight = UiValue("ui_leaderboard_list_height");
             viewportSize.preferredHeight = UiValue("ui_leaderboard_list_height");
             viewportSize.flexibleHeight = 0f;
+            // VerticalLayoutGroup 的 childForceExpandWidth=false 时子物体默认按 0 宽处理，
+            // 不显式声明 flexibleWidth 就撑不满整行——正文框会被压成 0 宽，逐字换行。
+            viewportSize.flexibleWidth = 1f;
             ScrollRect scroll = viewportObject.AddComponent<ScrollRect>();
             scroll.horizontal = false;
             scroll.vertical = true;

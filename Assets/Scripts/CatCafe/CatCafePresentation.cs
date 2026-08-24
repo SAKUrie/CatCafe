@@ -100,7 +100,9 @@ public void Initialize()
 
         private static Sprite LoadSkin(string asset)
         {
-            return Resources.Load<Sprite>(PaperSkinFolder + asset);
+            // 表格可直接给出 Resources 相对路径；旧配置未写路径时仍从通用纸艺目录读取。
+            string resourcePath = asset.IndexOf('/') >= 0 ? asset : PaperSkinFolder + asset;
+            return Resources.Load<Sprite>(resourcePath);
         }
 
         public void ApplyNamedSkin(Image image, string asset, Color tint)
@@ -174,8 +176,9 @@ public void Initialize()
             string key = requestedBy + "|" + asset;
             if (!missingSkinWarnings.Add(key)) return;
 
+            string resourcePath = asset.IndexOf('/') >= 0 ? asset : PaperSkinFolder + asset;
             Debug.LogWarning("[CatCafeUI] 纸艺素材缺失，已回退程序化框线：" +
-                requestedBy + " -> Resources/" + PaperSkinFolder + asset);
+                requestedBy + " -> Resources/" + resourcePath);
         }
 
         public GameObject NewUi(string name, Transform parent)

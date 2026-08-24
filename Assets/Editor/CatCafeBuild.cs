@@ -49,6 +49,48 @@ namespace ManyFace.CatCafe.Editor
             BuildFromMenu(false);
         }
 
+        /// <summary>WebGL 包：itch.io 网页版发布用。输出是一整个目录（index.html + Build/），
+        /// 没有可执行文件名的概念，直接拿目录本身当 locationPathName。</summary>
+        [MenuItem("Tools/Cat Cafe/构建 WebGL 包", false, 102)]
+        private static void BuildWebGLFromMenu()
+        {
+            string error;
+            if (!ValidateVersion(out error))
+            {
+                EditorUtility.DisplayDialog("构建 WebGL 包", "失败：\n" + error, "知道了");
+                return;
+            }
+
+            string output = ResolveOutputPath("_WebGL");
+            if (Directory.Exists(output) && Directory.EnumerateFileSystemEntries(output).Any())
+            {
+                bool overwrite = EditorUtility.DisplayDialog(
+                    "目标目录已存在",
+                    output + "\n\n继续会覆盖里面的同名文件。\n" +
+                    "想留着旧包就先取消，去 Project Settings → Player → Version 改版本号。",
+                    "覆盖", "取消");
+                if (!overwrite) return;
+            }
+
+            bool ok = RunWebGL(output, out error);
+            EditorUtility.DisplayDialog("构建 WebGL 包",
+                ok ? "成功：\n" + output : "失败：\n" + error, "知道了");
+        }
+
+        /// <summary>批处理入口，供 itch 发布脚本调用：
+        /// Unity -quit -batchmode -projectPath &lt;项目&gt;
+        ///       -executeMethod ManyFace.CatCafe.Editor.CatCafeBuild.BuildWebGLCli</summary>
+        private static void BuildWebGLCli()
+        {
+            string output = ResolveOutputPath("_WebGL");
+            string error;
+            if (!RunWebGL(output, out error))
+            {
+                Debug.LogError("[CatCafeBuild] " + error);
+                EditorApplication.Exit(1);
+            }
+        }
+
         /// <summary>
         /// 开发版包：带完整托管堆栈和 Debug.Log 输出。正式包崩了但看不出原因时用这个，
         /// Player.log 会给出真正的调用栈而不是一串没有符号的地址。
@@ -98,11 +140,15 @@ namespace ManyFace.CatCafe.Editor
 
         private static string ResolveOutputPath(bool development)
         {
+            return ResolveOutputPath(development ? "_dev" : string.Empty);
+        }
+
+        private static string ResolveOutputPath(string suffix)
+        {
             string downloads = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
             return Path.Combine(downloads,
-                ProductName + "_" + SanitizeVersion(PlayerSettings.bundleVersion) +
-                (development ? "_dev" : string.Empty));
+                ProductName + "_" + SanitizeVersion(PlayerSettings.bundleVersion) + suffix);
         }
 
         /// <summary>版本号空着会拼出 CatCafe_ 这种目录名，出包前先拦下来。</summary>
@@ -279,6 +325,62 @@ namespace ManyFace.CatCafe.Editor
             {
                 Directory.Delete(burstDebug, true);
                 Debug.Log("[CatCafeBuild] 已移除 " + Path.GetFileName(burstDebug));
+            }
+
+            Debug.Log(string.Format(
+                "[CatCafeBuild] 构建成功：{0}\n  产物 {1:F1} MB，用时 {2:F0} 秒",
+                output, summary.totalSize / (1024f * 1024f), summary.totalTime.TotalSeconds));
+            return true;
+        }
+
+        /// <summary>WebGL 版构建逻辑，与 <see cref="Run"/> 平行：同样的场景收集、闪屏/
+        /// Shader 兜底，唯独没有 Burst 调试符号目录要清（那是独立包才有的产物）。</summary>
+        private static bool RunWebGL(string output, out string error)
+        {
+            if (!ValidateVersion(out error)) return false;
+            EnforceSplashDisabled();
+            EnforceRuntimeShadersIncluded();
+
+            string[] scenes = EditorBuildSettings.scenes
+                .Where(scene => scene.enabled)
+                .Select(scene => scene.path)
+                .ToArray();
+            if (scenes.Length == 0)
+            {
+                error = "Build Settings 里没有启用任何场景。";
+                return false;
+            }
+
+            Directory.CreateDirectory(output);
+
+            StringBuilder log = new StringBuilder();
+            log.AppendLine("[CatCafeBuild] 开始构建（WebGL）");
+            log.AppendLine("  版本 " + PlayerSettings.bundleVersion +
+                "（" + PlayerSettings.companyName + " / " + PlayerSettings.productName + "）");
+            log.AppendLine("  输出 " + output);
+            for (int i = 0; i < scenes.Length; i++)
+            {
+                log.AppendLine("  场景 " + i + "  " + scenes[i]);
+            }
+            Debug.Log(log.ToString());
+
+            BuildPlayerOptions options = new BuildPlayerOptions
+            {
+                scenes = scenes,
+                locationPathName = output,
+                target = BuildTarget.WebGL,
+                targetGroup = BuildTargetGroup.WebGL,
+                options = BuildOptions.None,
+            };
+
+            BuildReport report = BuildPipeline.BuildPlayer(options);
+            BuildSummary summary = report.summary;
+            if (summary.result != BuildResult.Succeeded)
+            {
+                error = string.Format("构建{0}，{1} 个错误。详见 Console。",
+                    summary.result == BuildResult.Cancelled ? "被取消" : "失败",
+                    summary.totalErrors);
+                return false;
             }
 
             Debug.Log(string.Format(
